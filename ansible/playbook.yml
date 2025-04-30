@@ -1,0 +1,80 @@
+---
+- name: Setup EC2 for Yii2 App with Docker Swarm and NGINX
+  hosts: webserver
+  become: true
+
+  vars:
+    docker_user: ubuntu 
+    app_repo: "https://github.com/yiisoft/yii2-app-basic.git"
+    app_path: "/opt/yii2-app"
+    nginx_conf_local: "./nginx/yii2.conf"
+    nginx_conf_remote: "/etc/nginx/sites-available/yii2"
+    domain_name: "18.233.170.236" 
+
+  tasks:
+
+    - name: Update apt cache and upgrade packages
+      apt:
+        update_cache: yes
+        upgrade: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Install required packages
+      apt:
+        name:
+          - git
+          - php
+          - php-cli
+          - php-mbstring
+          - curl
+          - nginx
+          - docker.io
+          - docker-compose
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Add user to docker group
+      user:
+        name: "{{ docker_user }}"
+        groups: docker
+        append: yes
+
+    - name: Start and enable Docker service
+      systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    - name: Initialize Docker Swarm (idempotent)
+      shell: docker swarm init || true
+
+    - name: Clone Yii2 application repo
+      git:
+        repo: "{{ app_repo }}"
+        dest: "{{ app_path }}"
+        version: master
+
+    - name: Copy NGINX config
+      copy:
+        src: "{{ nginx_conf_local }}"
+        dest: "{{ nginx_conf_remote }}"
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Enable NGINX site config
+      file:
+        src: "{{ nginx_conf_remote }}"
+        dest: "/etc/nginx/sites-enabled/yii2"
+        state: link
+        force: yes
+
+    - name: Remove default NGINX site
+      file:
+        path: "/etc/nginx/sites-enabled/default"
+        state: absent
+
+    - name: Restart NGINX
+      systemd:
+        name: nginx
+        state: restarted
