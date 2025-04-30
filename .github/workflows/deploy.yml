@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  IMAGE_NAME: akshaytati02/yii2-app
+  IMAGE_NAME: akshaytati/yii2-app
 
 jobs:
   build-and-deploy:
@@ -23,10 +23,10 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build Docker image
-        run: docker build -t akshaytati/yii2-app:latest .
+        run: docker build -t docker.io/${{ env.IMAGE_NAME }}:latest .
 
       - name: Push Docker image
-        run: docker push akshaytati/yii2-app:latest
+        run: docker push docker.io/${{ env.IMAGE_NAME }}:latest
 
       - name: SSH into EC2 and update Docker Swarm service
         uses: appleboy/ssh-action@v1.0.3
@@ -35,6 +35,6 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            docker pull $IMAGE_NAME:latest
-            docker service update --image $IMAGE_NAME:latest yii2_app || \
-              docker service create --name yii2_app -p 8000:80 $IMAGE_NAME:latest
+            docker pull docker.io/${{ env.IMAGE_NAME }}:latest
+            docker service update --image docker.io/${{ env.IMAGE_NAME }}:latest yii2_app || \
+              docker service create --name yii2_app -p 8000:80 docker.io/${{ env.IMAGE_NAME }}:latest
