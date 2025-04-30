@@ -139,7 +139,7 @@ By default, there are 3 test suites:
 - `acceptance`
 
 Tests can be executed by running
-
+Test
 ```
 vendor/bin/codecept run
 ```
